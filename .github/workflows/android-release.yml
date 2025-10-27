@@ -17,6 +17,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      
     env:
       VERSION: ${{ github.event.inputs.version || github.ref_name }}
 
