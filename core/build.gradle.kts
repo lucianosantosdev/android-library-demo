@@ -1,8 +1,12 @@
+apply(from = "$rootDir/gradle/version.gradle.kts")
+val releaseVersion: String by extra
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.detekt)
     id("jacoco")
+    `maven-publish`
 }
 
 detekt {
@@ -43,6 +47,13 @@ android {
     kotlinOptions {
         jvmTarget = "11"
     }
+
+    // Tell Gradle we want to publish both debug & release variants
+    publishing {
+        multipleVariants {
+            allVariants()
+        }
+    }
 }
 
 dependencies {
@@ -52,4 +63,38 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+
+afterEvaluate {
+    publishing {
+        publications {
+            // === Release publication ===
+            create<MavenPublication>("release") {
+                from(components["release"])
+                groupId = "dev.lucianosantos"
+                artifactId = "library-demo"
+                version = releaseVersion
+            }
+
+            // === Debug publication ===
+            create<MavenPublication>("debug") {
+                from(components["debug"])
+                groupId = "dev.lucianosantos"
+                artifactId = "library-demo"
+                version = releaseVersion
+            }
+        }
+
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/lucianosantosdev/android-library-demo")
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR")
+                    password = System.getenv("GITHUB_TOKEN")
+                }
+            }
+        }
+    }
 }
