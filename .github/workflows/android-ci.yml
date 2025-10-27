@@ -1,0 +1,76 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v5
+    
+    - name: set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'jetbrains'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    
+    - name: Run detekt static analysis
+      run: |
+        ./gradlew detekt || echo "::warning::Detekt found issues, but continuing workflow"
+
+    - name: Upload detekt report to summary
+      if: success() || failure()
+      run: |
+        if [ -f "core/build/reports/detekt/detekt.md" ]; then
+          echo "# 🔍 Detekt Static Analysis Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "<details>" >> $GITHUB_STEP_SUMMARY
+          echo "<summary>📋 Click to view detekt analysis results</summary>" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat core/build/reports/detekt/detekt.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "</details>" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "# ✅ Detekt Static Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "No issues found by detekt analysis." >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Run tests with coverage
+      run: ./gradlew testDebugUnitTest jacocoTestReport
+
+    - name: Add Title to Unit test summary
+      run: |
+        echo "# 🧪 Unit Test Report" >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload Test results Report
+      uses: dorny/test-reporter@v2     
+      if: success() || failure()
+      with:
+        name: 🧪 JUnit Tests
+        path: core/build/test-results/testDebugUnitTest/**/TEST-*.xml
+        reporter: 'java-junit'
+
+    - name: Add title to coverage report
+      run: |
+        echo "# 📊 Code Coverage Report" >> $GITHUB_STEP_SUMMARY
+
+    - name: Add coverage to PR
+      id: jacoco
+      uses: madrapps/jacoco-report@v1.7.2
+      with:
+        paths: |
+          ${{ github.workspace }}/**/build/reports/jacoco/**/jacocoTestReport.xml
+        token: ${{ secrets.GITHUB_TOKEN }}
+        comment-type: both
+        min-coverage-overall: 40
+        min-coverage-changed-files: 60
+        continue-on-error: true
