@@ -73,7 +73,7 @@ afterEvaluate {
             create<MavenPublication>("release") {
                 from(components["release"])
                 groupId = "dev.lucianosantos"
-                artifactId = "library-demo"
+                artifactId = "library-demo-release"
                 version = releaseVersion
             }
 
@@ -81,7 +81,7 @@ afterEvaluate {
             create<MavenPublication>("debug") {
                 from(components["debug"])
                 groupId = "dev.lucianosantos"
-                artifactId = "library-demo"
+                artifactId = "library-demo-debug"
                 version = releaseVersion
             }
         }
